@@ -12,9 +12,10 @@ Because FileUpload only supports Servlets and Portlets, I extended FileUpload an
 
 ## TODO
 
-1. Remove all framework/lib dependencies
-2. Try Java NIO and thread pool
-3. Add progress bar
+1. [] Remove all framework/lib dependencies
+	* [x] Removed apache http client
+2. [] Try Java NIO and thread pool
+3. [] Add progress bar, page css
 
 
 

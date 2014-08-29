@@ -15,7 +15,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 /**
- * @Author csyangchsh
+ * @author csyangchsh
  * Date: 14/8/7
  */
 public class MiniFileServer {
@@ -24,6 +24,7 @@ public class MiniFileServer {
     private ServerSocket serversocket;
     private HttpService httpService;
 
+    public static final TempFileFactory tempFileFactory = new TempFileFactory();
 
 
     public MiniFileServer(final int port,
@@ -32,6 +33,7 @@ public class MiniFileServer {
         this.connFactory = DefaultBHttpServerConnectionFactory.INSTANCE;
         this.serversocket = sf != null ? sf.createServerSocket(port) : new ServerSocket(port);
         this.httpService = httpService;
+
     }
 
     public void listen() {
@@ -57,6 +59,11 @@ public class MiniFileServer {
         }
     }
 
+    public void cleanUp() {
+        tempFileFactory.clear();
+        Util.safeClose(serversocket);
+    }
+
     public static void main(String[] args) throws IOException {
         if (args.length < 1) {
             System.err.println("Please specify document root directory");
@@ -68,16 +75,21 @@ public class MiniFileServer {
 
         HttpProcessor httpproc = HttpProcessorBuilder.create()
                 .add(new ResponseDate())
-                .add(new ResponseServer("FileServer/1.1"))
+                .add(new ResponseServer("MiniFileServer/1.1"))
                 .add(new ResponseContent())
                 .add(new ResponseConnControl()).build();
 
         UriHttpRequestHandlerMapper reqistry = new UriHttpRequestHandlerMapper();
-        reqistry.register("*", new FileListHandler(docRoot));
-
+        reqistry.register("*", new FileListHandler(docRoot, tempFileFactory));
         HttpService httpService = new HttpService(httpproc, reqistry);
 
-        MiniFileServer server = new MiniFileServer(port, httpService, (SSLServerSocketFactory)null);
+        final MiniFileServer server = new MiniFileServer(port, httpService, (SSLServerSocketFactory)null);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(){
+            public void run() {
+                server.cleanUp();
+            }
+        });
 
         while (!Thread.interrupted()) {
             server.listen();
